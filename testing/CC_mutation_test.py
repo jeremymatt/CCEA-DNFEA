@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 L = 100
-Pw = .25
+Pw = .75
 num_reps=500
 num_runs = 50
 
@@ -22,13 +22,13 @@ for i in range(num_runs):
     trace = []
     for i in range(num_reps):
         
-        
-        feature = np.random.randint(L)
-        if clause[feature]==0:
-            clause[feature]=1
-        else:
-            if np.random.rand(1)[0] < Pw:
-                clause[feature]=0
+        for feature in range(L):
+            if np.random.rand(1)[0] < 1/L:
+                if clause[feature]==0:
+                    clause[feature]=1
+                else:
+                    if np.random.rand(1)[0] < Pw:
+                        clause[feature]=0
                 
         trace.append(np.sum(clause))
         
@@ -38,3 +38,6 @@ yval = np.array(traces)
 yval = yval.mean(axis=0)
     
 plt.plot(range(num_reps),yval)
+plt.grid()
+plt.xlabel('Mutation Num')
+plt.ylabel('CC Order')
