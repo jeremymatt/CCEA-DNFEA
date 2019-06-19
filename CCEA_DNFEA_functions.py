@@ -57,7 +57,7 @@ def find_ranges(data,y):
 
 
 
-def rand_CC_clause(var_ranges):
+def gen_CC_clause_pop(var_ranges,new_pop, target_class, CC_stats):
     """
     Generates a random conjunctive clause given a set of variable ranges
     
@@ -69,6 +69,31 @@ def rand_CC_clause(var_ranges):
     OUTPUTS
         clause - a randomly generated clause
     """
+    num_vars = len(var_ranges.keys())
+    
+
+def find_max_input_feature_order(data,y):
+    """
+    Finds the number of non-missing data in each of the input feature vectors
+    
+    
+    INPUTS
+        data - pandas dataframe of the input features and the outcome variable.
+            Missing values must be denoted with NaN
+        y - the name of the column in the pandas dataframe containing the 
+            outcome variable
+            
+    OUTPUTS
+        feat_order - pandas series containing the order of each feature vector
+    """
+    
+    #Find the variable column names
+    data_cols = [x for x in data.keys() if not x==y]
+    
+    feat_order = len(data_cols) - data[data_cols].isna().sum(axis=1)
+    
+    return feat_order
+    
  
 def calc_Nk(data,y,clause):
     """
