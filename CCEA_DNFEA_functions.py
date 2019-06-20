@@ -8,6 +8,19 @@ Created on Sun Jun 16 13:29:23 2019
 import pandas as pd
 from collections import namedtuple
 
+class parameter_container:
+    """
+    An empty object used to pass variables and data to a function
+    """
+    def __init__(self):
+        breakhere=1
+        
+    def keys(self):
+        """
+        Return a list of tuples of the variable names and types
+        """
+        return [(x,type(self.__dict__[x])) for x in self.__dict__.keys()]
+
 def find_ranges(data,y):
     """
     Finds the ranges of each input variable and returns a dataframe of the min 
@@ -70,6 +83,7 @@ def gen_CC_clause_pop(var_ranges,new_pop, target_class, CC_stats):
         clause - a randomly generated clause
     """
     num_vars = len(var_ranges.keys())
+    
     
 
 def find_max_input_feature_order(data,y):
