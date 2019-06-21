@@ -62,7 +62,7 @@ def make_test(n,perc_missing = 25):
     for i in range(num_missing):
         row = np.random.choice(rows)
         col = np.random.choice(cols)
-        print('{}: row-{} col-{}'.format(i,row,col))
+#        print('{}: row-{} col-{}'.format(i,row,col))
         data.loc[row,col] = np.nan
         
     return data

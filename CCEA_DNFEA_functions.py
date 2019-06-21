@@ -6,6 +6,7 @@ Created on Sun Jun 16 13:29:23 2019
 """
 
 import pandas as pd
+import numpy as np
 from collections import namedtuple
 
 class parameter_container:
@@ -99,7 +100,7 @@ def find_ranges(data,y):
 
 
 
-def gen_CC_clause_pop(var_ranges,new_pop, target_class, CC_stats):
+def gen_CC_clause_pop(param,new_pop, target_class, CC_stats):
     """
     Generates a random conjunctive clause given a set of variable ranges
     
@@ -111,7 +112,11 @@ def gen_CC_clause_pop(var_ranges,new_pop, target_class, CC_stats):
     OUTPUTS
         clause - a randomly generated clause
     """
-    num_vars = len(var_ranges.keys())
+    num_vars = len(param.var_ranges.keys())
+    
+    new_pop_list = []
+    for i in new_pop:
+        clause_order = np.random.randint(num_vars)
     
     
 
