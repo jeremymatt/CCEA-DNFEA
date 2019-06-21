@@ -45,12 +45,15 @@ def find_ranges(data,y):
     types =[]
     #Determine if the variable is binary, integer, or continuous as a way
     #to reduce the search space
+    var_ranges = pd.DataFrame()
     for var in data_cols:
         #Get the set of unique values for the current variable
         unique_vals = set(data.loc[~data[var].isna(),var])
+        var_data.loc['max',var] = max(unique_vals)
+        var_data.loc['min',var] = min(unique_vals)
         #If there are two unique values, the variable is binary
         if len(unique_vals)==2:
-            types.append('bin')
+            var_data.loc['type',var] = 'binary'
         else:    
             #Convert the unique values to integers; if the integer values are
             #equal to the un-converted values, then the variable is contains
@@ -58,13 +61,13 @@ def find_ranges(data,y):
             unique_int = [int(x) for x in unique_vals]
             zipped = list(zip(unique_vals,unique_int))
             if all([x==y for x,y in zipped]):
-                types.append('int')
+                var_data.loc['type',var] = 'categorical'
             else:
-                types.append('cont')
+                var_data.loc['type',var] = 'continuous'
     
     
     #Build dataframe of ranges
-    var_ranges = pd.DataFrame({'max':var_data.max(),'min':var_data.min(),'type':types}).transpose()
+#    var_ranges = pd.DataFrame({'max':var_data.max(),'min':var_data.min(),'type':types}).transpose()
     
     return var_ranges
 
