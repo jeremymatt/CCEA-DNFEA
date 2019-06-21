@@ -76,11 +76,23 @@ def find_ranges(data,y):
     for var in data_cols:
         #Get the set of unique values for the current variable
         unique_vals = set(data.loc[~data[var].isna(),var])
-        var_data.loc['max',var] = max(unique_vals)
-        var_data.loc['min',var] = min(unique_vals)
+#        var_ranges['set',var] = np.NaN
+        try:
+            var_ranges.loc['max',var] = max(unique_vals)
+            var_ranges.loc['min',var] = min(unique_vals)
+            is_numeric = True
+        except:
+            var_ranges.loc['max',var] = np.NaN
+            var_ranges.loc['min',var] = np.NaN
+            var_ranges.at['set',var] = unique_vals
+            var_ranges.loc['type',var] = 'categorical'
+            print('WARNING: Variable {} contains non-numeric data.'.format(var))
+            
+        
         #If there are two unique values, the variable is binary
         if len(unique_vals)==2:
-            var_data.loc['type',var] = 'binary'
+            var_ranges.loc['type',var] = 'binary'
+            var_ranges.at['set',var] = unique_vals
         else:    
             #Convert the unique values to integers; if the integer values are
             #equal to the un-converted values, then the variable is contains
@@ -88,9 +100,10 @@ def find_ranges(data,y):
             unique_int = [int(x) for x in unique_vals]
             zipped = list(zip(unique_vals,unique_int))
             if all([x==y for x,y in zipped]):
-                var_data.loc['type',var] = 'categorical'
+                var_ranges.loc['type',var] = 'integer'
+                var_ranges.at['set',var] = unique_vals
             else:
-                var_data.loc['type',var] = 'continuous'
+                var_ranges.loc['type',var] = 'continuous'
     
     
     #Build dataframe of ranges
