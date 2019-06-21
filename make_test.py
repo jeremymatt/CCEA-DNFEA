@@ -58,10 +58,11 @@ def make_test(n,perc_missing = 25):
     cols = data.keys()[:-1]
     rows = range(n)
     
-    num_missing = np.round(n*perc_missing/100).astype(int)
+    num_missing = np.round(n*data.shape[1]*perc_missing/100).astype(int)
     for i in range(num_missing):
         row = np.random.choice(rows)
         col = np.random.choice(cols)
+        print('{}: row-{} col-{}'.format(i,row,col))
         data.loc[row,col] = np.nan
         
     return data
