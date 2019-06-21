@@ -10,16 +10,41 @@ from collections import namedtuple
 
 class parameter_container:
     """
-    An empty object used to pass variables and data to a function
+    An empty object used to pass variables and data between functions
     """
     def __init__(self):
         breakhere=1
         
-    def keys(self):
+    def keys(self,prnt=True):
         """
         Return a list of tuples of the variable names and types
+        
+        INPUTS
+            prnt - (default = True) print the keys and types.  False return
+                as a list of key/type tuples
         """
-        return [(x,type(self.__dict__[x])) for x in self.__dict__.keys()]
+        
+        keylist = sorted([(x,type(self.__dict__[x])) for x in self.__dict__.keys()])
+        if prnt:
+            #print column width
+            CW = 40 
+            #print header
+            print('{: ^{CW}}|{: ^{CW}}'.format(
+                    'Variable',
+                    'Type',
+                    CW=CW))
+            print('{:-^{CW}}|{:-^{CW}}'.format(
+                    '-',
+                    '-',
+                    CW=CW))
+            #Print sorted keys
+            for name,v_type in keylist:
+                print('{: ^{CW}}| {: <{CW}}'.format(
+                        name,
+                        str(v_type),
+                        CW=CW))    
+        else:
+            return  keylist
 
 def find_ranges(data,y):
     """
