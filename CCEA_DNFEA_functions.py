@@ -23,6 +23,9 @@ class parameter_container:
         INPUTS
             prnt - (default = True) print the keys and types.  False return
                 as a list of key/type tuples
+                
+        OUTPUTS
+            keylist - a list of key/type tuples
         """
         
         keylist = sorted([(x,type(self.__dict__[x])) for x in self.__dict__.keys()])
@@ -46,6 +49,44 @@ class parameter_container:
                         CW=CW))    
         else:
             return  keylist
+        
+class CC_clause:
+    """
+    An object to contain a single conjunctive clause
+    """
+    def __init__(self,data,y,param,source_feature,order):
+        """
+        Initialize the clause based on the selected source_feature
+    
+        INPUTS
+            data - pandas dataframe of the input features and the outcome variable.
+                Missing values must be denoted with NaN
+            y - the name of the column in the pandas dataframe containing the 
+                outcome variable
+            param - an object containing control parameters
+            source_feature - index of the feature used as a template for the CC
+            order - the order of the CC
+        
+        """
+        
+        source_feature_mask = ~pd.DataFrame(data.loc[source_feature,param.variable_keys]).isna()
+        valid_features = list(source_feature_mask[list(source_feature_mask.values)].index)
+        self.order = order
+        self.features = np.random.choice(valid_features,self.order)
+        
+        
+        
+    def keys(self,prnt=True):
+        """
+        Return a list of tuples of the variable names and types
+        
+        INPUTS
+            prnt - (default = True) print the keys and types.  False return
+                as a list of key/type tuples
+                
+        OUTPUTS
+            keylist - a list of key/type tuples
+        """
         
 
 def find_ranges(data,y):
@@ -125,11 +166,10 @@ def gen_CC_clause_pop(param,new_pop, target_class, CC_stats):
     OUTPUTS
         clause - a randomly generated clause
     """
-    num_vars = len(param.var_ranges.keys())
     
     new_pop_list = []
     for i in new_pop:
-        clause_order = np.random.randint(num_vars)
+        clause_order = np.random.randint(param.num_features)
     
     
 
