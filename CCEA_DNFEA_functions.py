@@ -114,41 +114,60 @@ def find_ranges(data,y):
     #Determine if the variable is binary, integer, or continuous as a way
     #to reduce the search space
     var_ranges = pd.DataFrame()
+    var_to_drop = []
     for var in data_cols:
         #Get the set of unique values for the current variable
         unique_vals = set(data.loc[~data[var].isna(),var])
 #        var_ranges['set',var] = np.NaN
-        try:
-            var_ranges.loc['max',var] = max(unique_vals)
-            var_ranges.loc['min',var] = min(unique_vals)
-            is_numeric = True
-        except:
-            var_ranges.loc['max',var] = np.NaN
-            var_ranges.loc['min',var] = np.NaN
-            var_ranges.at['set',var] = unique_vals
-            var_ranges.loc['type',var] = 'categorical'
-            print('WARNING: Variable {} contains non-numeric data.'.format(var))
-            
+        breakhere=1
         
-        #If there are two unique values, the variable is binary
-        if len(unique_vals)==2:
-            var_ranges.loc['type',var] = 'binary'
-            var_ranges.at['set',var] = unique_vals
-        else:    
-            #Convert the unique values to integers; if the integer values are
-            #equal to the un-converted values, then the variable is contains
-            #only integers.  Otherwise, call the variable a continuous variable
-            unique_int = [int(x) for x in unique_vals]
-            zipped = list(zip(unique_vals,unique_int))
-            if all([x==y for x,y in zipped]):
-                var_ranges.loc['type',var] = 'integer'
+        #If there are less than 2 unique values, warn user of useless variable 
+        #and add variable to the droplist
+        if len(unique_vals)<2:
+            print('WARNING:')
+            print('     Variable {} contains {} unique, non-NaN values and contains no useful information'.format(var,len(unique_vals)))
+            print('     Dropping Variable {} from the dataset'.format(var))
+            var_to_drop.append(var)
+        else:
+            #test to see if values are numeric
+            try: 
+                t = np.array(list(unique_vals))+2 
+                is_numeric = True
+            except:
+                is_numeric = False
+                
+            #If the values are all numeric, find the min and max, and categorize
+            #as binary, integer, or continuous
+            if is_numeric:
+                var_ranges.loc['max',var] = max(unique_vals)
+                var_ranges.loc['min',var] = min(unique_vals)
+                #If there are two unique values, the variable is binary
+                if len(unique_vals)==2:
+                    var_ranges.loc['type',var] = 'binary'
+                    var_ranges.at['set',var] = unique_vals
+                else:    
+                    #Convert the unique values to integers; if the integer values are
+                    #equal to the un-converted values, then the variable is contains
+                    #only integers.  Otherwise, call the variable a continuous variable
+                    unique_int = [int(x) for x in unique_vals]
+                    zipped = list(zip(unique_vals,unique_int))
+                    if all([x==y for x,y in zipped]):
+                        var_ranges.loc['type',var] = 'integer'
+                        var_ranges.at['set',var] = unique_vals
+                    else:
+                        var_ranges.loc['type',var] = 'continuous'
+                        
+            else:    
+                var_ranges.loc['max',var] = np.NaN
+                var_ranges.loc['min',var] = np.NaN
+                var_ranges.loc['type',var] = 'categorical'
                 var_ranges.at['set',var] = unique_vals
-            else:
-                var_ranges.loc['type',var] = 'continuous'
+                print('WARNING: \n     Variable {} contains non-numeric data.'.format(var))
+                
+            
     
-    
-    #Build dataframe of ranges
-#    var_ranges = pd.DataFrame({'max':var_data.max(),'min':var_data.min(),'type':types}).transpose()
+    data.drop(columns=var_to_drop,inplace=True)
+#    var_ranges.drop(columns=var_to_drop,inplace=True)
     
     return var_ranges
 
