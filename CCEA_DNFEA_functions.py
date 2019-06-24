@@ -54,7 +54,7 @@ class CC_clause:
     """
     An object to contain a single conjunctive clause
     """
-    def __init__(self,data,y,param,source_feature,order):
+    def __init__(self,data,y,param,source_feature,clause_order):
         """
         Initialize the clause based on the selected source_feature
     
@@ -69,11 +69,20 @@ class CC_clause:
         
         """
         
-        source_feature_mask = ~pd.DataFrame(data.loc[source_feature,param.variable_keys]).isna()
-        valid_features = list(source_feature_mask[list(source_feature_mask.values)].index)
-        self.order = order
-        self.features = np.random.choice(valid_features,self.order)
+        feature_data = data.loc[source_feature,param.variable_keys]
+        candidate_features = list(feature_data[~feature_data.isna()].index)
+        self.features = np.random.choice(candidate_features,size=clause_order,replace=False)
+        self.order = clause_order
         
+        for feature in self.features:
+            #decide ranges
+        
+        
+        
+        
+        
+#        new_pop_list[-1].identify_matches(inputvars)
+#        new_pop_list[-1].calc_fitness(inputvars)
         
         
     def keys(self,prnt=True):
@@ -189,6 +198,55 @@ def gen_CC_clause_pop(param,new_pop, target_class, CC_stats):
     new_pop_list = []
     for i in new_pop:
         clause_order = np.random.randint(param.num_features)
+        candidate_mask = param.feature_order>=clause_order
+        cand_match_counts = CC_stats.matched_input_vectors[candidate_mask]
+        source_feature = sel_input_feature(cand_match_counts)
+        
+        new_pop_list.append(CC_clause(data,y,param,source_feature,clause_order))
+        
+        inputvars = 'figure these out'
+        new_pop_list[-1].identify_matches(inputvars)
+        new_pop_list[-1].calc_fitness(inputvars)
+        
+def sel_input_feature(cand_match_counts):
+    """
+    Selects an input feature as the 'template'.  The probability of a feature 
+    being selected is inversely proportional to the number of clauses it is 
+    matched by
+    
+    INPUTS
+        CC_stats
+                .matched_input_vectors - a pandas series containing the match
+                    counts
+        candidates - the input feature vectors that have enough non-NaN values
+            to build a clause of the desired order
+            
+    OUTPUTS
+        feature - the index of the selected feature
+        
+    """
+    
+    #Find the number of times input feature vectors are matched
+    num_matched = sum(cand_match_counts)
+    
+    #If none are matched, use a uniform probability of selection
+    if num_matched == 0:
+        selection_PMF = (1-cand_match_counts)/sum(1-cand_match_counts)
+    else:
+        #The probability mass function that a feature is matched
+        match_PMF = cand_match_counts/sum(cand_match_counts)
+        #The probability mass function that a feature will be selected
+        selection_PMF = (1-match_PMF)/sum(1-match_PMF)
+    
+    #The cumulative distribution function for selection
+    selection_CDF = selection_PMF.cumsum()
+    
+    #Randomly select a feature
+    rand = np.random.rand()
+    feature = list(selection_CDF[selection_CDF>=rand].index)[0]
+    print(feature)
+    
+    return feature
     
     
 
