@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 
-def make_test(n,perc_missing = 25):
+def make_test(n,perc_missing = 25,inc_uni_valued=True):
     """
     Make a test set of 10 variables with n entries of binary, categorical, and 
     realvalued variables.  5 of the variables (1,4,5,8,10) are significant:
@@ -26,6 +26,11 @@ def make_test(n,perc_missing = 25):
     V8 = np.random.normal(loc=10,scale=2,size=n)  #>11
     V9 = [0 if x<.25 else 1 for x in np.random.rand(n)] 
     V10 = np.round(np.random.normal(loc=20,scale=10,size=n)) #18<X<22
+    V11 = np.ones(n)
+    V12 = V11*np.NaN
+    V13 = []
+    t = [V13.extend(['a','b','c']) for x in range(n)]
+    V13 = V13[:n]
     
     V1_bool = (V1>=5)&(V1<=7)
     V4_bool = V4>13
@@ -53,6 +58,10 @@ def make_test(n,perc_missing = 25):
     data['V8'] = V8
     data['V9'] = V9
     data['V10'] = V10
+    if inc_uni_valued:
+        data['V11'] = V11
+        data['V12'] = V12
+    data['V13'] = V13
     data['y'] = y
     
     cols = data.keys()[:-1]
