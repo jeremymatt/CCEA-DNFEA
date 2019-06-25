@@ -16,16 +16,16 @@ import CCEA_DNFEA_functions as fcn
 param = fcn.parameter_container()
 CC_stats = fcn.parameter_container()
 
-y='y'
 data = make_test(15,perc_missing=10,inc_uni_valued=True)
 
 
 
 
-param.var_ranges = fcn.find_ranges(data,y)
+param.y='y'
+param.var_ranges = fcn.find_ranges(data,param)
 param.variable_keys = [x for x in data.keys() if not x==y]
 param.num_features = len(param.variable_keys)
-param.feature_order = fcn.find_max_input_feature_order(data,y)
+param.feature_order = fcn.find_max_input_feature_order(data,param)
 param.treat_int_as_categorical = False
 CC_stats.matched_input_vectors = pd.Series(np.zeros(data.shape[0]))
 

@@ -54,7 +54,7 @@ class CC_clause:
     """
     An object to contain a single conjunctive clause
     """
-    def __init__(self,data,y,param,source_feature,clause_order):
+    def __init__(self,data,param,source_feature,clause_order):
         """
         Initialize the clause based on the selected source_feature
     
@@ -76,29 +76,36 @@ class CC_clause:
         
         for feature in self.features:
             #decide ranges
-        
-        
-        
-        
-        
-#        new_pop_list[-1].identify_matches(inputvars)
-#        new_pop_list[-1].calc_fitness(inputvars)
-        
-        
-    def keys(self,prnt=True):
-        """
-        Return a list of tuples of the variable names and types
-        
-        INPUTS
-            prnt - (default = True) print the keys and types.  False return
-                as a list of key/type tuples
+            if param.var_ranges == 'integer':
+                maxi = param.var_ranges.loc['max',feature]
+                mini = param.var_ranges.loc['min',feature]
+                lb = np.random.randint(maxi+1-mini)+mini
+                ub = np.random.randint(maxi+1-lb)+lb
                 
-        OUTPUTS
-            keylist - a list of key/type tuples
+                
+            elif param.var_ranges == 'continuous':
+                bh=1
+            elif param.var_ranges == 'binary':
+                bh=1
+            elif param.var_ranges == 'categorical':
+                bh=1
+        
+        
+    def identify_matches(self,inputvars):
         """
+        docstring
+        """
+        breakhere=1
+        
+        
+    def calc_fitness(self,inputvars):
+        """
+        docstring
+        """
+        breakhere=1
         
 
-def find_ranges(data,y):
+def find_ranges(data,param):
     """
     Finds the ranges of each input variable and returns a dataframe of the min 
     and max values
@@ -106,7 +113,8 @@ def find_ranges(data,y):
     INPUTS
         data - pandas dataframe of the input features and the outcome variable.
             Missing values must be denoted with NaN
-        y - the name of the column in the pandas dataframe containing the 
+        param
+            .y - the name of the column in the pandas dataframe containing the 
             outcome variable
             
     OUTPUTS
@@ -114,7 +122,7 @@ def find_ranges(data,y):
     """
     
     #Find the variable column names
-    data_cols = [x for x in data.keys() if not x==y]
+    data_cols = [x for x in data.keys() if not x==param.y]
     #Extract the variable data
     var_data = pd.DataFrame(data[data_cols])
     
@@ -202,7 +210,7 @@ def gen_CC_clause_pop(param,new_pop, target_class, CC_stats):
         cand_match_counts = CC_stats.matched_input_vectors[candidate_mask]
         source_feature = sel_input_feature(cand_match_counts)
         
-        new_pop_list.append(CC_clause(data,y,param,source_feature,clause_order))
+        new_pop_list.append(CC_clause(data,param,source_feature,clause_order))
         
         inputvars = 'figure these out'
         new_pop_list[-1].identify_matches(inputvars)
@@ -250,7 +258,7 @@ def sel_input_feature(cand_match_counts):
     
     
 
-def find_max_input_feature_order(data,y):
+def find_max_input_feature_order(data,param):
     """
     Finds the number of non-missing data in each of the input feature vectors
     
@@ -258,7 +266,8 @@ def find_max_input_feature_order(data,y):
     INPUTS
         data - pandas dataframe of the input features and the outcome variable.
             Missing values must be denoted with NaN
-        y - the name of the column in the pandas dataframe containing the 
+        param
+            .y - the name of the column in the pandas dataframe containing the 
             outcome variable
             
     OUTPUTS
@@ -266,14 +275,14 @@ def find_max_input_feature_order(data,y):
     """
     
     #Find the variable column names
-    data_cols = [x for x in data.keys() if not x==y]
+    data_cols = [x for x in data.keys() if not x==param.y]
     
     feat_order = len(data_cols) - data[data_cols].isna().sum(axis=1)
     
     return feat_order
     
  
-def calc_Nk(data,y,clause):
+def calc_Nk(data,param,clause):
     """
     Finds the number of input feature vectors with no missing data for the 
     given clause for each output class.
@@ -281,7 +290,8 @@ def calc_Nk(data,y,clause):
     INPUTS
         data - pandas dataframe of the input features and the outcome variable.
             Missing values must be denoted with NaN
-        y - the name of the column in the pandas dataframe containing the 
+        param
+            .y - the name of the column in the pandas dataframe containing the 
             outcome variable
         clause - List of variables included in the current conjunctive clause 
             (for a CCEA) or disjunctive normal form clause (for a DNFEA)
@@ -301,7 +311,7 @@ def calc_Nk(data,y,clause):
     class_counts = nm.value_counts()
     #Find the set of classes in the full dataset (required in case there is a
     #class for which all input feature vectors are missing at least one value)
-    classes = set(data[y])
+    classes = set(data[param.y])
     
     Nk = {}
     #For each class, try to add the count to the dictionary, otherwise set the 
@@ -313,7 +323,7 @@ def calc_Nk(data,y,clause):
     return Nk
 
 
-def calc_Nmatchk(data,y,):
+def calc_Nmatchk(data,param,):
     """
     
     """
