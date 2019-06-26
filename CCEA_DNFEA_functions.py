@@ -54,9 +54,11 @@ class CC_clause:
     """
     An object to contain a single conjunctive clause
     """
-    def __init__(self,data,param,source_feature,clause_order):
+    def __init__(self,data,param,source_input_vector,clause_order):
         """
-        Initialize the clause based on the selected source_feature
+        Initialize the clause based on the selected source_feature.  Force the
+        target ranges for each variable to be such that the clause will match
+        the source feature
     
         INPUTS
             data - pandas dataframe of the input features and the outcome variable.
@@ -64,17 +66,18 @@ class CC_clause:
             y - the name of the column in the pandas dataframe containing the 
                 outcome variable
             param - an object containing control parameters
-            source_feature - index of the feature used as a template for the CC
+            source_input_vector - index of the feature used as a template for the CC
             order - the order of the CC
         
         """
         
         #extract the data associated with the feature
-        feature_data = data.loc[source_feature,param.variable_keys]
+        input_vector_data = data.loc[source_input_vector,param.variable_keys]
         #Find the candidates with valid values
-        candidate_features = list(feature_data[~feature_data.isna()].index)
+        candidate_features = list(input_vector_data[~input_vector_data.isna()].index)
         #Randomly select clause_order features without replacement and store
         #in self
+        self.source_input_vector = source_input_vector
         self.features = np.random.choice(candidate_features,size=clause_order,replace=False)
         self.order = clause_order
         
@@ -83,34 +86,80 @@ class CC_clause:
             #Extract the max and min values of the feature
             max_val = param.var_ranges.loc['max',feature]
             min_val = param.var_ranges.loc['min',feature]
-            if param.var_ranges == 'integer':
-                #Define a continuous range beginning and ending on integers
-                #Select a lower bound on the integers in [min_val,max_val]
-                lb = np.random.randint(max_val+1-mini)+min_val
-                #Select an upper bound on the integers in [lb,max_val]
-                ub = np.random.randint(max_val+1-lb)+lb
-                #If the selected bounds contain the entire range (which would 
-                #indicate that the variable would have no contribution towards
-                #discriminating the output), randomly select either the upper 
-                #or lower bound to shift.  
-                if (lb==min_val)&(ub == max_val):
-                    #Calculate the adjustment as a random integer between 1 and
-                    #the difference between the min and max
-                    adjustment = np.random.randint(max_val-min_val)+1
-                    if np.random.rand()>0.5:
-                        lb+=adjustment
-                    else:
-                        ub-=adjustment
-                        
-                self.lb = lb
-                self.ub = ub
+            #Extract the feature value for the source target input vector
+            feature_val = feature_data[feature]
+            
+            if param.var_ranges == 'integer':     
+                self.lb,self.ub = range_calc_integer(max_val,min_val,feature_value)
                 
             elif param.var_ranges == 'continuous':
-                bh=1
+                #select a lower bound between the min value and the feature
+                #value
+                self.lb = np.random.rand()*(feature_val-min_val)+min_val
+                #select an upper bound between the feature value and the max
+                #value
+                self.ub = np.random.rand()*(max_val-feature_val)+feature_val
             elif param.var_ranges == 'binary':
-                bh=1
+                #Only one choice for binary to ensure clause matches input
+                #feature vector
+                self.target = feature_val
             elif param.var_ranges == 'categorical':
-                bh=1
+                all_feature_values = param.var_ranges.loc['set',feature]
+                max_elements = len(all_feature_values)-1
+                num_to_select = np.random.randint(max_elements)
+                selected_values = np.random.choice(list(all_feature_values),size=num_to_select,replace=False)
+                target = set([feature_val])
+                target = target.union(selected_values)
+                
+                print(target)
+                
+    def range_calc_integer(self,max_val,min_val,feature_value):
+        """
+        Generates a range with integer start & end points that:
+            1. does not contain both the minimum and the maximum value in the 
+                data, and
+            2. contains the feature value
+            
+        INPUTS
+            max_val - the maximum value in the data
+            min_val - the minimum value in the data
+            feature_val - the value of the current feature for the source vector
+            
+        OUTPUTS
+            The lower and upper bounds of the range
+        """
+        #Define a continuous range beginning and ending on integers
+        #Select a lower bound on the integers in [min_val,feature_val]
+        lb = np.random.randint(min_val,high=feature_val+1)
+        #Select an upper bound on the integers in [lb,max_val]
+        ub = np.random.randint(feature_val,high=max_val+1)
+        #If the selected bounds contain the entire range (which would 
+        #indicate that the variable would have no contribution towards
+        #discriminating the output), randomly select either the upper 
+        #or lower bound to shift.
+        if (lb==min_val)&(ub == max_val):
+            #determine which bound to adjust
+            if feature_val == min_val:
+                decrease_ub = True
+            elif feature_val == max_val:
+                decrease_ub = False
+            elif np.random.rand()>0.5:
+                decrease_ub = True
+            else:
+                decrease_ub = False
+            #Adjust the bound
+            if decrease_ub:
+                #Calculate the adjustment as a random integer between 1 and
+                #the difference between the min and value
+                adjustment = np.random.randint(max_val-feature_val)+1
+                ub-=adjustment
+            else:
+                #Calculate the adjustment as a random integer between 
+                #the difference between the min and value
+                adjustment = np.random.randint(feature_val-min_val)+1
+                lb+=adjustment
+                
+        return lb,ub
     
         
     def identify_matches(self,inputvars):
@@ -209,7 +258,6 @@ def find_ranges(data,param):
             
     
     data.drop(columns=var_to_drop,inplace=True)
-#    var_ranges.drop(columns=var_to_drop,inplace=True)
     
     return var_ranges
 
@@ -233,15 +281,15 @@ def gen_CC_clause_pop(param,new_pop, target_class, CC_stats):
         clause_order = np.random.randint(param.num_features)
         candidate_mask = param.feature_order>=clause_order
         cand_match_counts = CC_stats.matched_input_vectors[candidate_mask]
-        source_feature = sel_input_feature(cand_match_counts)
+        source_input_vector = sel_input_vector(cand_match_counts)
         
-        new_pop_list.append(CC_clause(data,param,source_feature,clause_order))
+        new_pop_list.append(CC_clause(data,param,source_input_vector,clause_order))
         
         inputvars = 'figure these out'
         new_pop_list[-1].identify_matches(inputvars)
         new_pop_list[-1].calc_fitness(inputvars)
         
-def sel_input_feature(cand_match_counts):
+def sel_input_vector(cand_match_counts):
     """
     Selects an input feature as the 'template'.  The probability of a feature 
     being selected is inversely proportional to the number of clauses it is 
@@ -276,10 +324,9 @@ def sel_input_feature(cand_match_counts):
     
     #Randomly select a feature
     rand = np.random.rand()
-    feature = list(selection_CDF[selection_CDF>=rand].index)[0]
-    print(feature)
+    input_vector = list(selection_CDF[selection_CDF>=rand].index)[0]
     
-    return feature
+    return input_vector
     
     
 
