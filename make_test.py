@@ -31,6 +31,9 @@ def make_test(n,perc_missing = 25,inc_uni_valued=True):
     V13 = []
     t = [V13.extend(['a','b','c']) for x in range(n)]
     V13 = V13[:n]
+    V14 = []
+    t = [V14.extend(['a','b']) for x in range(n)]
+    V14 = V14[:n]
     
     V1_bool = (V1>=5)&(V1<=7)
     V4_bool = V4>13
@@ -62,6 +65,7 @@ def make_test(n,perc_missing = 25,inc_uni_valued=True):
         data['V11'] = V11
         data['V12'] = V12
     data['V13'] = V13
+    data['V14'] = V14
     data['y'] = y
     
     cols = data.keys()[:-1]

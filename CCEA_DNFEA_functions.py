@@ -69,19 +69,41 @@ class CC_clause:
         
         """
         
+        #extract the data associated with the feature
         feature_data = data.loc[source_feature,param.variable_keys]
+        #Find the candidates with valid values
         candidate_features = list(feature_data[~feature_data.isna()].index)
+        #Randomly select clause_order features without replacement and store
+        #in self
         self.features = np.random.choice(candidate_features,size=clause_order,replace=False)
         self.order = clause_order
         
+        #decide ranges
         for feature in self.features:
-            #decide ranges
+            #Extract the max and min values of the feature
+            max_val = param.var_ranges.loc['max',feature]
+            min_val = param.var_ranges.loc['min',feature]
             if param.var_ranges == 'integer':
-                maxi = param.var_ranges.loc['max',feature]
-                mini = param.var_ranges.loc['min',feature]
-                lb = np.random.randint(maxi+1-mini)+mini
-                ub = np.random.randint(maxi+1-lb)+lb
-                
+                #Define a continuous range beginning and ending on integers
+                #Select a lower bound on the integers in [min_val,max_val]
+                lb = np.random.randint(max_val+1-mini)+min_val
+                #Select an upper bound on the integers in [lb,max_val]
+                ub = np.random.randint(max_val+1-lb)+lb
+                #If the selected bounds contain the entire range (which would 
+                #indicate that the variable would have no contribution towards
+                #discriminating the output), randomly select either the upper 
+                #or lower bound to shift.  
+                if (lb==min_val)&(ub == max_val):
+                    #Calculate the adjustment as a random integer between 1 and
+                    #the difference between the min and max
+                    adjustment = np.random.randint(max_val-min_val)+1
+                    if np.random.rand()>0.5:
+                        lb+=adjustment
+                    else:
+                        ub-=adjustment
+                        
+                self.lb = lb
+                self.ub = ub
                 
             elif param.var_ranges == 'continuous':
                 bh=1
@@ -89,7 +111,7 @@ class CC_clause:
                 bh=1
             elif param.var_ranges == 'categorical':
                 bh=1
-        
+    
         
     def identify_matches(self,inputvars):
         """
@@ -145,6 +167,14 @@ def find_ranges(data,param):
             print('     Variable {} contains {} unique, non-NaN values and contains no useful information'.format(var,len(unique_vals)))
             print('     Dropping Variable {} from the dataset'.format(var))
             var_to_drop.append(var)
+            
+        #If there are two unique values, the variable is binary
+        elif len(unique_vals)==2:
+            values = list(unique_vals)
+            var_ranges.loc['max',var] = values[0]
+            var_ranges.loc['min',var] = values[1]
+            var_ranges.loc['type',var] = 'binary'
+            var_ranges.at['set',var] = unique_vals
         else:
             #test to see if values are numeric
             try: 
@@ -158,21 +188,16 @@ def find_ranges(data,param):
             if is_numeric:
                 var_ranges.loc['max',var] = max(unique_vals)
                 var_ranges.loc['min',var] = min(unique_vals)
-                #If there are two unique values, the variable is binary
-                if len(unique_vals)==2:
-                    var_ranges.loc['type',var] = 'binary'
+                #Convert the unique values to integers; if the integer values are
+                #equal to the un-converted values, then the variable is contains
+                #only integers.  Otherwise, call the variable a continuous variable
+                unique_int = [int(x) for x in unique_vals]
+                zipped = list(zip(unique_vals,unique_int))
+                if all([x==y for x,y in zipped]):
+                    var_ranges.loc['type',var] = 'integer'
                     var_ranges.at['set',var] = unique_vals
-                else:    
-                    #Convert the unique values to integers; if the integer values are
-                    #equal to the un-converted values, then the variable is contains
-                    #only integers.  Otherwise, call the variable a continuous variable
-                    unique_int = [int(x) for x in unique_vals]
-                    zipped = list(zip(unique_vals,unique_int))
-                    if all([x==y for x,y in zipped]):
-                        var_ranges.loc['type',var] = 'integer'
-                        var_ranges.at['set',var] = unique_vals
-                    else:
-                        var_ranges.loc['type',var] = 'continuous'
+                else:
+                    var_ranges.loc['type',var] = 'continuous'
                         
             else:    
                 var_ranges.loc['max',var] = np.NaN
