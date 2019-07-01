@@ -80,93 +80,71 @@ class CC_clause:
         self.source_input_vector = source_input_vector
         self.features = np.random.choice(candidate_features,size=clause_order,replace=False)
         self.order = clause_order
-        
+        self.target_class = data.loc[source_input_vector,param.y]
+                
         #decide ranges
+        self.criteria = pd.DataFrame(dtype=object)
         for feature in self.features:
+            print('FEATURE IS: {}'.format(feature))
             #Extract the max and min values of the feature
             max_val = param.var_ranges.loc['max',feature]
             min_val = param.var_ranges.loc['min',feature]
             #Extract the feature value for the source target input vector
-            feature_val = feature_data[feature]
+            feature_val = input_vector_data[feature]
+            feature_type = param.var_ranges.loc['type',feature]
             
-            if param.var_ranges == 'integer':     
-                self.lb,self.ub = range_calc_integer(max_val,min_val,feature_value)
+            if feature_type == 'integer':     
+                lb,ub = range_calc_integer(max_val,min_val,feature_val)
+                self.criteria.loc['lb',feature] = lb
+                self.criteria.loc['ub',feature] = ub
+#                self.criteria.loc['target',feature] = np.NaN
                 
-            elif param.var_ranges == 'continuous':
+            elif feature_type == 'continuous':
                 #select a lower bound between the min value and the feature
                 #value
-                self.lb = np.random.rand()*(feature_val-min_val)+min_val
+                lb = np.random.rand()*(feature_val-min_val)+min_val
                 #select an upper bound between the feature value and the max
                 #value
-                self.ub = np.random.rand()*(max_val-feature_val)+feature_val
-            elif param.var_ranges == 'binary':
+                ub = np.random.rand()*(max_val-feature_val)+feature_val
+                print('lb:{} ub:{}'.format(lb,ub))
+                self.criteria.loc['lb',feature] = lb
+                self.criteria.loc['ub',feature] = ub
+                
+            elif feature_type == 'binary':
                 #Only one choice for binary to ensure clause matches input
                 #feature vector
-                self.target = feature_val
-            elif param.var_ranges == 'categorical':
+                self.criteria.loc['lb',feature] = np.NaN
+                breakhere=1
+                self.criteria = self.criteria.astype(object)
+                self.criteria.at['target',feature] = feature_val
+                
+            elif feature_type == 'categorical':
                 all_feature_values = param.var_ranges.loc['set',feature]
                 max_elements = len(all_feature_values)-1
                 num_to_select = np.random.randint(max_elements)
                 selected_values = np.random.choice(list(all_feature_values),size=num_to_select,replace=False)
                 target = set([feature_val])
                 target = target.union(selected_values)
-                
-                print(target)
-                
-    def range_calc_integer(self,max_val,min_val,feature_value):
-        """
-        Generates a range with integer start & end points that:
-            1. does not contain both the minimum and the maximum value in the 
-                data, and
-            2. contains the feature value
-            
-        INPUTS
-            max_val - the maximum value in the data
-            min_val - the minimum value in the data
-            feature_val - the value of the current feature for the source vector
-            
-        OUTPUTS
-            The lower and upper bounds of the range
-        """
-        #Define a continuous range beginning and ending on integers
-        #Select a lower bound on the integers in [min_val,feature_val]
-        lb = np.random.randint(min_val,high=feature_val+1)
-        #Select an upper bound on the integers in [lb,max_val]
-        ub = np.random.randint(feature_val,high=max_val+1)
-        #If the selected bounds contain the entire range (which would 
-        #indicate that the variable would have no contribution towards
-        #discriminating the output), randomly select either the upper 
-        #or lower bound to shift.
-        if (lb==min_val)&(ub == max_val):
-            #determine which bound to adjust
-            if feature_val == min_val:
-                decrease_ub = True
-            elif feature_val == max_val:
-                decrease_ub = False
-            elif np.random.rand()>0.5:
-                decrease_ub = True
+                self.criteria.loc['lb',feature] = np.NaN
+                target = set([1,2,3])
+                breakhere=1
+                self.criteria = self.criteria.astype(object)
+                self.criteria.at['target',feature] = target
             else:
-                decrease_ub = False
-            #Adjust the bound
-            if decrease_ub:
-                #Calculate the adjustment as a random integer between 1 and
-                #the difference between the min and value
-                adjustment = np.random.randint(max_val-feature_val)+1
-                ub-=adjustment
-            else:
-                #Calculate the adjustment as a random integer between 
-                #the difference between the min and value
-                adjustment = np.random.randint(feature_val-min_val)+1
-                lb+=adjustment
+                print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
                 
-        return lb,ub
-    
+                
+        print(self.criteria)
         
-    def identify_matches(self,inputvars):
+    def identify_matches(self,data,param):
         """
-        docstring
+        Identifies the input feature vectors that the clause matches
         """
-        breakhere=1
+        matches = pd.DataFrame()
+        for feature in self.features:
+            breakhere=1
+            
+            
         
         
     def calc_fitness(self,inputvars):
@@ -174,7 +152,58 @@ class CC_clause:
         docstring
         """
         breakhere=1
+ 
+
         
+def range_calc_integer(max_val,min_val,feature_val):
+    """
+    Generates a range with integer start & end points that:
+        1. does not contain both the minimum and the maximum value in the 
+            data, and
+        2. contains the feature value
+        
+    INPUTS
+        max_val - the maximum value in the data
+        min_val - the minimum value in the data
+        feature_val - the value of the current feature for the source vector
+        
+    OUTPUTS
+        The lower and upper bounds of the range
+    """
+    #Define a continuous range beginning and ending on integers
+    #Select a lower bound on the integers in [min_val,feature_val]
+    lb = np.random.randint(min_val,high=feature_val+1)
+    #Select an upper bound on the integers in [lb,max_val]
+    ub = np.random.randint(feature_val,high=max_val+1)
+    #If the selected bounds contain the entire range (which would 
+    #indicate that the variable would have no contribution towards
+    #discriminating the output), randomly select either the upper 
+    #or lower bound to shift.
+    if (lb==min_val)&(ub == max_val):
+        #determine which bound to adjust
+        if feature_val == min_val:
+            decrease_ub = True
+        elif feature_val == max_val:
+            decrease_ub = False
+        elif np.random.rand()>0.5:
+            decrease_ub = True
+        else:
+            decrease_ub = False
+        #Adjust the bound
+        if decrease_ub:
+            #Calculate the adjustment as a random integer between 1 and
+            #the difference between the min and value
+            adjustment = np.random.randint(max_val-feature_val)+1
+            ub-=adjustment
+        else:
+            #Calculate the adjustment as a random integer between 
+            #the difference between the min and value
+            adjustment = np.random.randint(feature_val-min_val)+1
+            lb+=adjustment
+            
+    return lb,ub
+
+       
 
 def find_ranges(data,param):
     """
@@ -263,7 +292,7 @@ def find_ranges(data,param):
 
 
 
-def gen_CC_clause_pop(param,new_pop, target_class, CC_stats):
+def gen_CC_clause_pop(data,param,new_pop,CC_stats):
     """
     Generates a random conjunctive clause given a set of variable ranges
     
@@ -277,7 +306,7 @@ def gen_CC_clause_pop(param,new_pop, target_class, CC_stats):
     """
     
     new_pop_list = []
-    for i in new_pop:
+    for i in range(new_pop):
         clause_order = np.random.randint(param.num_features)
         candidate_mask = param.feature_order>=clause_order
         cand_match_counts = CC_stats.matched_input_vectors[candidate_mask]
@@ -286,8 +315,10 @@ def gen_CC_clause_pop(param,new_pop, target_class, CC_stats):
         new_pop_list.append(CC_clause(data,param,source_input_vector,clause_order))
         
         inputvars = 'figure these out'
-        new_pop_list[-1].identify_matches(inputvars)
+        new_pop_list[-1].identify_matches(data,param)
         new_pop_list[-1].calc_fitness(inputvars)
+        
+    return new_pop_list
         
 def sel_input_vector(cand_match_counts):
     """

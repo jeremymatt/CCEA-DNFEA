@@ -29,3 +29,6 @@ param.feature_order = fcn.find_max_input_feature_order(data,param)
 param.treat_int_as_categorical = False
 CC_stats.matched_input_vectors = pd.Series(np.zeros(data.shape[0]))
 
+num_new_pop = 2
+new_pop = fcn.gen_CC_clause_pop(data,param,num_new_pop,CC_stats)
+
