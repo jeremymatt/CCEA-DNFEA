@@ -85,7 +85,6 @@ class CC_clause:
         #decide ranges
         self.criteria = pd.DataFrame(dtype=object)
         for feature in self.features:
-            print('FEATURE IS: {}'.format(feature))
             #Extract the max and min values of the feature
             max_val = param.var_ranges.loc['max',feature]
             min_val = param.var_ranges.loc['min',feature]
@@ -97,7 +96,6 @@ class CC_clause:
                 lb,ub = range_calc_integer(max_val,min_val,feature_val)
                 self.criteria.loc['lb',feature] = lb
                 self.criteria.loc['ub',feature] = ub
-#                self.criteria.loc['target',feature] = np.NaN
                 
             elif feature_type == 'continuous':
                 #select a lower bound between the min value and the feature
@@ -114,7 +112,6 @@ class CC_clause:
                 #Only one choice for binary to ensure clause matches input
                 #feature vector
                 self.criteria.loc['lb',feature] = np.NaN
-                breakhere=1
                 self.criteria = self.criteria.astype(object)
                 self.criteria.at['target',feature] = feature_val
                 
@@ -134,15 +131,37 @@ class CC_clause:
                 print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
                 
                 
-        print(self.criteria)
+#        print(self.criteria)
         
-    def identify_matches(self,data,param):
+    def identify_matches(self,data,param,features_to_update = 'all'):
         """
         Identifies the input feature vectors that the clause matches
         """
-        matches = pd.DataFrame()
-        for feature in self.features:
-            breakhere=1
+        #if all, update all features
+        if features_to_update == 'all':
+            features_to_update = self.features
+            
+        #Check if dictionary of matches exists, if it doesn't, create
+        try: self.matches
+        except: self.matches = pd.DataFrame()
+        
+        for feature in features_to_update:
+            feature_type = param.var_ranges.loc['type',feature]
+            
+            if (feature_type == 'integer')|(feature_type == 'continuous'):
+                lb_matches = data[feature]>self.criteria.loc['lb',feature]
+                ub_matches = data[feature]<self.criteria.loc['ub',feature]
+                self.matches[feature] = lb_matches&ub_matches
+                
+                
+            elif feature_type == 'binary':                
+                self.matches[feature] = data[feature]==self.criteria.loc['target',feature]
+                
+            elif feature_type == 'categorical':
+                self.matches[feature] = 1
+            else:
+                print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
+                
             
             
         
@@ -307,7 +326,7 @@ def gen_CC_clause_pop(data,param,new_pop,CC_stats):
     
     new_pop_list = []
     for i in range(new_pop):
-        clause_order = np.random.randint(param.num_features)
+        clause_order = np.random.randint(param.num_features)+1
         candidate_mask = param.feature_order>=clause_order
         cand_match_counts = CC_stats.matched_input_vectors[candidate_mask]
         source_input_vector = sel_input_vector(cand_match_counts)
