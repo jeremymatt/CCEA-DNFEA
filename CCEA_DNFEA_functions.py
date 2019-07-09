@@ -71,6 +71,12 @@ class CC_clause:
         
         """
         
+#        
+#        """
+#        remove next lines
+#        """
+#        source_input_vector = 6
+        
         #extract the data associated with the feature
         input_vector_data = data.loc[source_input_vector,param.variable_keys]
         #Find the candidates with valid values
@@ -79,6 +85,12 @@ class CC_clause:
         #in self
         self.source_input_vector = source_input_vector
         self.features = np.random.choice(candidate_features,size=clause_order,replace=False)
+        
+#        """
+#        remove next lines
+#        """
+#        self.features = np.array(['V2','V7','V6','V13'])
+        
         self.order = clause_order
         self.target_class = data.loc[source_input_vector,param.y]
                 
@@ -104,9 +116,10 @@ class CC_clause:
                 #select an upper bound between the feature value and the max
                 #value
                 ub = np.random.rand()*(max_val-feature_val)+feature_val
-                print('lb:{} ub:{}'.format(lb,ub))
                 self.criteria.loc['lb',feature] = lb
                 self.criteria.loc['ub',feature] = ub
+                
+#                print('Feature: {}, Value: {}, global min/max: {}/{}, lb: {}, ub: {}'.format(feature,feature_val,min_val,max_val,lb,ub))
                 
             elif feature_type == 'binary':
                 #Only one choice for binary to ensure clause matches input
@@ -116,15 +129,24 @@ class CC_clause:
                 self.criteria.at['target',feature] = feature_val
                 
             elif feature_type == 'categorical':
+                #Store the set of all values
                 all_feature_values = param.var_ranges.loc['set',feature]
+                #The maximum number of values the rule can match is one less 
+                #than the total number of values (or it would match everything
+                #and would not provide any useful info)
                 max_elements = len(all_feature_values)-1
+                #Determine the number of elements from the value set to include
                 num_to_select = np.random.randint(max_elements)
+                #select the values to include in the rule set. NOTE: This may
+                #or may not include the value of the target input feature
                 selected_values = np.random.choice(list(all_feature_values),size=num_to_select,replace=False)
+                #Force the value of the target input feature to be in the 
+                #rule set
                 target = set([feature_val])
+                #Add the previously selected values to the rule set
                 target = target.union(selected_values)
+                #Store in self.criteria
                 self.criteria.loc['lb',feature] = np.NaN
-                target = set([1,2,3])
-                breakhere=1
                 self.criteria = self.criteria.astype(object)
                 self.criteria.at['target',feature] = target
             else:
@@ -149,8 +171,8 @@ class CC_clause:
             feature_type = param.var_ranges.loc['type',feature]
             
             if (feature_type == 'integer')|(feature_type == 'continuous'):
-                lb_matches = data[feature]>self.criteria.loc['lb',feature]
-                ub_matches = data[feature]<self.criteria.loc['ub',feature]
+                lb_matches = data[feature]>=self.criteria.loc['lb',feature]
+                ub_matches = data[feature]<=self.criteria.loc['ub',feature]
                 self.matches[feature] = lb_matches&ub_matches
                 
                 
@@ -158,11 +180,11 @@ class CC_clause:
                 self.matches[feature] = data[feature]==self.criteria.loc['target',feature]
                 
             elif feature_type == 'categorical':
-                self.matches[feature] = 1
+                self.matches[feature] = data[feature].isin(self.criteria.loc['target',feature])
             else:
                 print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
                 
-            
+        self.matches['clause_match'] = self.matches.all(axis=1) 
             
         
         
