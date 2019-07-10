@@ -50,6 +50,10 @@ class parameter_container:
         else:
             return  keylist
         
+    """
+    END parameter_containiner class
+    """
+        
 class CC_clause:
     """
     An object to contain a single conjunctive clause
@@ -68,6 +72,17 @@ class CC_clause:
             param - an object containing control parameters
             source_input_vector - index of the feature used as a template for the CC
             order - the order of the CC
+            
+        VARIABLES
+            order - the number of features in the clause
+            target_class - the output target class the clause is trying to match
+            source_input_vector - the input vector used to build the clause
+            features - the features that are included in the clause
+            criteria - dataframe containing the matching criteria fro each feature
+            matches - dataframe containing:
+                1. boolean matches of each feature,
+                2. what input feature vectors are matched (the clause output)
+                3. Which values of the clause output match the data output
         
         """
         
@@ -78,6 +93,8 @@ class CC_clause:
 #        source_input_vector = 6
         
         #extract the data associated with the feature
+        self.order = clause_order
+        self.target_class = data.loc[source_input_vector,param.y]
         input_vector_data = data.loc[source_input_vector,param.variable_keys]
         #Find the candidates with valid values
         candidate_features = list(input_vector_data[~input_vector_data.isna()].index)
@@ -91,8 +108,6 @@ class CC_clause:
 #        """
 #        self.features = np.array(['V2','V7','V6','V13'])
         
-        self.order = clause_order
-        self.target_class = data.loc[source_input_vector,param.y]
                 
         #decide ranges
         self.criteria = pd.DataFrame(dtype=object)
@@ -185,15 +200,47 @@ class CC_clause:
                 print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
                 
         self.matches['clause_match'] = self.matches.all(axis=1) 
+        self.matches.loc[self.matches['clause_match'],'output_class']=1
+        self.matches['match_data_output'] = self.matches['output_class'] == data[param.y]
             
         
+        
+         
+    def update_Nk(self,data,param):
+        """
+        Updates the number of input feature vectors with no missing data for the 
+        given clause for each output class.
+        
+        INPUTS
+            data - pandas dataframe of the input features and the outcome variable.
+                Missing values must be denoted with NaN
+            param
+                .y - the name of the column in the pandas dataframe containing the 
+                outcome variable
+        """
+        
+        self.Nk = calc_Nk(data,param,self.features)
+    
+    
+    def update_Nmatchk(self,data,param):
+        """
+        
+        """
+        
+        t=1
+ 
+    
         
     def calc_fitness(self,inputvars):
         """
         docstring
         """
         breakhere=1
- 
+        
+        
+    """
+    END OF CC_Clause object
+    """
 
         
 def range_calc_integer(max_val,min_val,feature_val):
@@ -426,7 +473,7 @@ def find_max_input_feature_order(data,param):
     return feat_order
     
  
-def calc_Nk(data,param,clause):
+def calc_Nk(data,param,clause_features):
     """
     Finds the number of input feature vectors with no missing data for the 
     given clause for each output class.
@@ -437,7 +484,7 @@ def calc_Nk(data,param,clause):
         param
             .y - the name of the column in the pandas dataframe containing the 
             outcome variable
-        clause - List of variables included in the current conjunctive clause 
+        clause_features - List of variables included in the current conjunctive clause 
             (for a CCEA) or disjunctive normal form clause (for a DNFEA)
             
     OUTPUTS
@@ -446,7 +493,7 @@ def calc_Nk(data,param,clause):
     """
     
     #find all NaN values
-    is_missing = data[clause].isna()
+    is_missing = data[clause_features].isna()
     #Mask all rows missing at one or more value
     is_missing = is_missing.any(axis=1)
     #Extract the non-missing output values
@@ -467,8 +514,23 @@ def calc_Nk(data,param,clause):
     return Nk
 
 
-def calc_Nmatchk(data,param,):
+def calc_Nmatchk(data,param,clause):
     """
+    Finds the number of input feature vectors with no missing data for the 
+    given clause for each output class.
+    
+    INPUTS
+        data - pandas dataframe of the input features and the outcome variable.
+            Missing values must be denoted with NaN
+        param
+            .y - the name of the column in the pandas dataframe containing the 
+            outcome variable
+        clause_features - List of variables included in the current conjunctive clause 
+            (for a CCEA) or disjunctive normal form clause (for a DNFEA)
+            
+    OUTPUTS
+        Nk - dict containg the number of complete input feature vectors for
+            each output class
     
     """
     
