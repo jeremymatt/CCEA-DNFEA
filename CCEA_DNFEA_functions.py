@@ -16,6 +16,8 @@ class parameter_container:
     def __init__(self):
         breakhere=1
         
+        
+        
     def keys(self,prnt=True):
         """
         Return a list of tuples of the variable names and types
@@ -28,27 +30,45 @@ class parameter_container:
             keylist - a list of key/type tuples
         """
         
-        keylist = sorted([(x,type(self.__dict__[x])) for x in self.__dict__.keys()])
         if prnt:
-            #print column width
-            CW = 40 
-            #print header
-            print('{: ^{CW}}|{: ^{CW}}'.format(
-                    'Variable',
-                    'Type',
-                    CW=CW))
-            print('{:-^{CW}}|{:-^{CW}}'.format(
-                    '-',
-                    '-',
-                    CW=CW))
-            #Print sorted keys
-            for name,v_type in keylist:
-                print('{: ^{CW}}| {: <{CW}}'.format(
-                        name,
-                        str(v_type),
-                        CW=CW))    
+            get_keys(self,prnt)
         else:
-            return  keylist
+            return get_keys(self,prnt)
+        
+        
+#    def keys(self,prnt=True):
+#        """
+#        Return a list of tuples of the variable names and types
+#        
+#        INPUTS
+#            prnt - (default = True) print the keys and types.  False return
+#                as a list of key/type tuples
+#                
+#        OUTPUTS
+#            keylist - a list of key/type tuples
+#        """
+#        
+#        keylist = sorted([(x,type(self.__dict__[x])) for x in self.__dict__.keys()])
+#        if prnt:
+#            #print column width
+#            CW = 40 
+#            #print header
+#            print('{: ^{CW}}|{: ^{CW}}'.format(
+#                    'Variable',
+#                    'Type',
+#                    CW=CW))
+#            print('{:-^{CW}}|{:-^{CW}}'.format(
+#                    '-',
+#                    '-',
+#                    CW=CW))
+#            #Print sorted keys
+#            for name,v_type in keylist:
+#                print('{: ^{CW}}| {: <{CW}}'.format(
+#                        name,
+#                        str(v_type),
+#                        CW=CW))    
+#        else:
+#            return  keylist
         
     """
     END parameter_containiner class
@@ -219,7 +239,9 @@ class CC_clause:
                 outcome variable
         """
         
-        self.Nk = calc_Nk(data,param,self.features)
+        self.Nk_all = calc_Nk(data,param,self.features)
+        self.Nk = self.Nk_all[self.target_class]
+        self.Ntot = sum(self.Nk_all.values())
     
     
     def update_Nmatchk(self,data,param):
@@ -227,7 +249,27 @@ class CC_clause:
         
         """
         
-        t=1
+        self.Nmatch_k = sum(self.matches['match_data_output'])
+        self.Nmatch = sum(self.matches['clause_match'])
+        
+        
+    def ratio_test(self):
+        """
+        
+        """
+        
+        #Correct matches divided by all matches
+        fraction_correct = self.Nmatch_k/self.Nmatch
+        #number of input feature vectors for a certain class divided by the 
+        #total number of input feature vectors.  In both cases, use the number
+        #of input feature vectors with no missing data
+        class_fraction = self.Nk/self.Ntot
+        
+        if fraction_correct<class_fraction:
+            self.pass_ratio_test = False
+        else:
+            self.pass_ratio_test = True
+        
  
     
         
@@ -236,6 +278,26 @@ class CC_clause:
         docstring
         """
         breakhere=1
+        
+        
+        
+    def keys(self,prnt=True):
+        """
+        Return a list of tuples of the variable names and types
+        
+        INPUTS
+            prnt - (default = True) print the keys and types.  False return
+                as a list of key/type tuples
+                
+        OUTPUTS
+            keylist - a list of key/type tuples
+        """
+        
+        if prnt:
+            get_keys(self,prnt)
+        else:
+            return get_keys(self,prnt)
+        
         
         
     """
@@ -497,7 +559,7 @@ def calc_Nk(data,param,clause_features):
     #Mask all rows missing at one or more value
     is_missing = is_missing.any(axis=1)
     #Extract the non-missing output values
-    nm = data.loc[~is_missing,y]
+    nm = data.loc[~is_missing,param.y]
     #Find the number of complete input feature vectors for each class
     class_counts = nm.value_counts()
     #Find the set of classes in the full dataset (required in case there is a
@@ -535,3 +597,39 @@ def calc_Nmatchk(data,param,clause):
     """
     
     t=1
+    
+    
+        
+def get_keys(dct,prnt):
+    """
+    Return a list of tuples of the variable names and types
+    
+    INPUTS
+        prnt - (default = True) print the keys and types.  False return
+            as a list of key/type tuples
+            
+    OUTPUTS
+        keylist - a list of key/type tuples
+    """
+    
+    keylist = sorted([(x,type(dct.__dict__[x])) for x in dct.__dict__.keys()])
+    if prnt:
+        #print column width
+        CW = 40 
+        #print header
+        print('{: ^{CW}}|{: ^{CW}}'.format(
+                'Variable',
+                'Type',
+                CW=CW))
+        print('{:-^{CW}}|{:-^{CW}}'.format(
+                '-',
+                '-',
+                CW=CW))
+        #Print sorted keys
+        for name,v_type in keylist:
+            print('{: ^{CW}}| {: <{CW}}'.format(
+                    name,
+                    str(v_type),
+                    CW=CW))    
+    else:
+        return  keylist
