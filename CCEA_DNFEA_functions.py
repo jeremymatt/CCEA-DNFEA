@@ -36,40 +36,6 @@ class parameter_container:
             return get_keys(self,prnt)
         
         
-#    def keys(self,prnt=True):
-#        """
-#        Return a list of tuples of the variable names and types
-#        
-#        INPUTS
-#            prnt - (default = True) print the keys and types.  False return
-#                as a list of key/type tuples
-#                
-#        OUTPUTS
-#            keylist - a list of key/type tuples
-#        """
-#        
-#        keylist = sorted([(x,type(self.__dict__[x])) for x in self.__dict__.keys()])
-#        if prnt:
-#            #print column width
-#            CW = 40 
-#            #print header
-#            print('{: ^{CW}}|{: ^{CW}}'.format(
-#                    'Variable',
-#                    'Type',
-#                    CW=CW))
-#            print('{:-^{CW}}|{:-^{CW}}'.format(
-#                    '-',
-#                    '-',
-#                    CW=CW))
-#            #Print sorted keys
-#            for name,v_type in keylist:
-#                print('{: ^{CW}}| {: <{CW}}'.format(
-#                        name,
-#                        str(v_type),
-#                        CW=CW))    
-#        else:
-#            return  keylist
-        
     """
     END parameter_containiner class
     """
@@ -466,6 +432,9 @@ def gen_CC_clause_pop(data,param,new_pop,CC_stats):
         
         inputvars = 'figure these out'
         new_pop_list[-1].identify_matches(data,param)
+        new_pop_list[-1].update_Nk(data,param)
+        new_pop_list[-1].update_Nmatchk(data,param)
+        new_pop_list[-1].ratio_test()
         new_pop_list[-1].calc_fitness(inputvars)
         
     return new_pop_list
