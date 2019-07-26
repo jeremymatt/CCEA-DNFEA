@@ -7,7 +7,7 @@ Created on Sun Jun 16 13:29:23 2019
 
 import pandas as pd
 import numpy as np
-from collections import namedtuple
+import scipy.special as sps
 
 class parameter_container:
     """
@@ -221,7 +221,7 @@ class CC_clause:
         
     def ratio_test(self):
         """
-        
+        docstring
         """
         
         #Correct matches divided by all matches
@@ -239,11 +239,15 @@ class CC_clause:
  
     
         
-    def calc_fitness(self,inputvars):
+    def calc_fitness(self):
         """
         docstring
         """
-        breakhere=1
+        part1 = sps.binom(self.Nk,self.Nmatch_k)
+        part2 = sps.binom((self.Ntot-self.Nk),(self.Nmatch-self.Nmatch_k))
+        part3 = sps.binom(self.Ntot,self.Nmatch)
+        
+        self.fitness = part1*part2/part3
         
         
         
