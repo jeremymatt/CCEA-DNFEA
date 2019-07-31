@@ -81,7 +81,7 @@ class CC_clause:
         #extract the data associated with the feature
         self.order = clause_order
         self.target_class = data.loc[source_input_vector,param.y]
-        input_vector_data = data.loc[source_input_vector,param.variable_keys]
+        input_vector_data = data.loc[source_input_vector,param.data_features]
         #Find the candidates with valid values
         candidate_features = list(input_vector_data[~input_vector_data.isna()].index)
         #Randomly select clause_order features without replacement and store
@@ -168,12 +168,16 @@ class CC_clause:
         try: self.matches
         except: self.matches = pd.DataFrame()
         
+        #For all features requiring match testing
         for feature in features_to_update:
             feature_type = param.var_ranges.loc['type',feature]
             
             if (feature_type == 'integer')|(feature_type == 'continuous'):
+                #The value is greater than or equal to the lower bound
                 lb_matches = data[feature]>=self.criteria.loc['lb',feature]
+                #The value is less than or equal to the upper bound
                 ub_matches = data[feature]<=self.criteria.loc['ub',feature]
+                #the value is in [lb ub]
                 self.matches[feature] = lb_matches&ub_matches
                 
                 
@@ -185,8 +189,11 @@ class CC_clause:
             else:
                 print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
                 
-        self.matches['clause_match'] = self.matches.all(axis=1) 
-        self.matches.loc[self.matches['clause_match'],'output_class']=1
+        #True if all features are matched
+        self.matches['clause_match'] = self.matches[self.features].all(axis=1) 
+        #The predicted output class for clause matches, np.nan for non-matches
+        self.matches.loc[self.matches['clause_match'],'output_class']=self.target_class
+        #boolean match of output class
         self.matches['match_data_output'] = self.matches['output_class'] == data[param.y]
             
         
@@ -205,17 +212,26 @@ class CC_clause:
                 outcome variable
         """
         
+        #matches segregated by output class
         self.Nk_all = calc_Nk(data,param,self.features)
+        #Number of input feature vectors with no missing data for the features
+        #of the clause and with which matches the target output class of the
+        #clause
         self.Nk = self.Nk_all[self.target_class]
+        #total number of input feature vectors with no missing data for the
+        #features of the clause regardless of output class
         self.Ntot = sum(self.Nk_all.values())
     
     
     def update_Nmatchk(self,data,param):
         """
-        
+        Finds the number of matches for the target output class and the total 
+        number of clause matches
         """
         
+        #Number of clause matches that correctly predict the output class
         self.Nmatch_k = sum(self.matches['match_data_output'])
+        #total number of input feature vectors that the clause matches
         self.Nmatch = sum(self.matches['clause_match'])
         
         
@@ -241,13 +257,54 @@ class CC_clause:
         
     def calc_fitness(self):
         """
-        docstring
+        Calculates the fitness of the CC using the hypergeometric probability
+        distribution
         """
+        
+        #NOTE: "valid" input feature vectors = the input feature vectors 
+        #without any missing values for the features present in the clause
+        
+        #number of ways the correct (true positive) clause matches could be 
+        #selected from the number of valid input feature vectors for class k
         part1 = sps.binom(self.Nk,self.Nmatch_k)
+        #the number of ways the number of incorrect (false positive) clause 
+        #matches could be selected from the number of valid input feature
+        #vectors that have a class other than k
         part2 = sps.binom((self.Ntot-self.Nk),(self.Nmatch-self.Nmatch_k))
+        #The number of ways the clause matches (regardless of class) could be 
+        #selected from the number of valid input feature vectors
         part3 = sps.binom(self.Ntot,self.Nmatch)
         
+        #The probability that the observed association between the clause and 
+        #the target class k is due to chance
         self.fitness = part1*part2/part3
+        
+        
+    def drop_feature(self,data,param,features_to_drop):
+        """
+        removes a feature or a list of features from the clause
+        """
+        
+        #Drop the values from the criteria
+        self.criteria.drop(columns=features_to_drop,inplace=True)
+        #Drop the values from the matches dataframe
+        self.matches.drop(columns=features_to_drop,inplace=True)
+        #Update the features list
+        self.features = [val for val in self.features if not val in features_to_drop]
+        
+        #Do not update the matches for any features, but update the 
+        #global clause-matching variable, the output class variable,
+        #and test for matching the output class
+        self.identify_matches(data,param,[])
+        #Update the number of input feature vectors with no missing data
+        #for the features in the clause
+        self.update_Nk(data,param)
+        #Update the mach counts
+        self.update_Nmatchk(data,param)
+        #recalculate the fitness
+        self.calc_fitness()
+        
+        
         
         
         
@@ -439,7 +496,7 @@ def gen_CC_clause_pop(data,param,new_pop,CC_stats):
         new_pop_list[-1].update_Nk(data,param)
         new_pop_list[-1].update_Nmatchk(data,param)
         new_pop_list[-1].ratio_test()
-        new_pop_list[-1].calc_fitness(inputvars)
+        new_pop_list[-1].calc_fitness()
         
     return new_pop_list
         

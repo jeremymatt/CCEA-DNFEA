@@ -23,12 +23,12 @@ data = make_test(15,perc_missing=10,inc_uni_valued=True)
 
 param.y='y'
 param.var_ranges = fcn.find_ranges(data,param)
-param.variable_keys = [x for x in data.keys() if not x==param.y]
-param.num_features = len(param.variable_keys)
+param.data_features = [x for x in data.keys() if not x==param.y]
+param.num_features = len(param.data_features)
 param.feature_order = fcn.find_max_input_feature_order(data,param)
 param.treat_int_as_categorical = False
 CC_stats.matched_input_vectors = pd.Series(np.zeros(data.shape[0]))
 
 num_new_pop = 2
-new_pop = fcn.gen_CC_clause_pop(data,param,num_new_pop,CC_stats)
+pop = fcn.gen_CC_clause_pop(data,param,num_new_pop,CC_stats)
 
