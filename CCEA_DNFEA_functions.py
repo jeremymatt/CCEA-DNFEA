@@ -81,7 +81,7 @@ class CC_clause:
         #extract the data associated with the feature
         self.order = clause_order
         self.target_class = data.loc[source_input_vector,param.y]
-        input_vector_data = data.loc[source_input_vector,param.data_features]
+        self.input_vector_data = data.loc[source_input_vector,param.data_features]
         #Find the candidates with valid values
         candidate_features = list(input_vector_data[~input_vector_data.isna()].index)
         #Randomly select clause_order features without replacement and store
@@ -98,63 +98,83 @@ class CC_clause:
         #decide ranges
         self.criteria = pd.DataFrame(dtype=object)
         for feature in self.features:
-            #Extract the max and min values of the feature
-            max_val = param.var_ranges.loc['max',feature]
-            min_val = param.var_ranges.loc['min',feature]
             #Extract the feature value for the source target input vector
             feature_val = input_vector_data[feature]
-            feature_type = param.var_ranges.loc['type',feature]
+            self.generate_CC_criteria(data,param,feature,feature_val)
             
-            if feature_type == 'integer':     
-                lb,ub = range_calc_integer(max_val,min_val,feature_val)
-                self.criteria.loc['lb',feature] = lb
-                self.criteria.loc['ub',feature] = ub
+    def generate_CC_criteria(self,data,param,feature,actual_feature_value):
+        """
+        creates criteria for a newly added feature
+        
+        pass actual_feature_value = np.nan if the actual feature value is 
+        not available
+        """
+        
+        #Extract the max and min values of the feature
+        max_val = param.var_ranges.loc['max',feature]
+        min_val = param.var_ranges.loc['min',feature]
+        feature_type = param.var_ranges.loc['type',feature]
+        
+        if feature_type == 'integer':     
+            lb,ub = range_calc_integer(max_val,min_val,actual_feature_value)
+            self.criteria.loc['lb',feature] = lb
+            self.criteria.loc['ub',feature] = ub
+            
+        elif feature_type == 'continuous':
                 
-            elif feature_type == 'continuous':
-                #select a lower bound between the min value and the feature
-                #value
-                lb = np.random.rand()*(feature_val-min_val)+min_val
-                #select an upper bound between the feature value and the max
-                #value
-                ub = np.random.rand()*(max_val-feature_val)+feature_val
-                self.criteria.loc['lb',feature] = lb
-                self.criteria.loc['ub',feature] = ub
-                
-#                print('Feature: {}, Value: {}, global min/max: {}/{}, lb: {}, ub: {}'.format(feature,feature_val,min_val,max_val,lb,ub))
-                
-            elif feature_type == 'binary':
-                #Only one choice for binary to ensure clause matches input
-                #feature vector
-                self.criteria.loc['lb',feature] = np.NaN
-                self.criteria = self.criteria.astype(object)
-                self.criteria.at['target',feature] = feature_val
-                
-            elif feature_type == 'categorical':
-                #Store the set of all values
-                all_feature_values = param.var_ranges.loc['set',feature]
-                #The maximum number of values the rule can match is one less 
-                #than the total number of values (or it would match everything
-                #and would not provide any useful info)
-                max_elements = len(all_feature_values)-1
-                #Determine the number of elements from the value set to include
-                num_to_select = np.random.randint(max_elements)
-                #select the values to include in the rule set. NOTE: This may
-                #or may not include the value of the target input feature
-                selected_values = np.random.choice(list(all_feature_values),size=num_to_select,replace=False)
-                #Force the value of the target input feature to be in the 
-                #rule set
-                target = set([feature_val])
-                #Add the previously selected values to the rule set
-                target = target.union(selected_values)
-                #Store in self.criteria
-                self.criteria.loc['lb',feature] = np.NaN
-                self.criteria = self.criteria.astype(object)
-                self.criteria.at['target',feature] = target
+            #check if there is a feature value to match or not
+            missing_feature_val = np.isnan(actual_feature_val)
+            if missing_feature_val:
+                feature_val = max_val
             else:
-                print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
+                feature_val = actual_feature_val
+            
+            #select a lower bound between the min value and the feature
+            #value
+            lb = np.random.rand()*(feature_val-min_val)+min_val
+            
+            #if the feature value is nan, set the lower range to the
+            #lower bound previously determined
+            if missing_feature_val:
+                feature_val = lb
+               
+            #select an upper bound between the feature value and the max
+            #value 
+            ub = np.random.rand()*(max_val-feature_val)+feature_val
+            self.criteria.loc['lb',feature] = lb
+            self.criteria.loc['ub',feature] = ub
+            
+        elif feature_type == 'binary':
+            #Only one choice for binary to ensure clause matches input
+            #feature vector
+            self.criteria.loc['lb',feature] = np.NaN
+            self.criteria = self.criteria.astype(object)
+            self.criteria.at['target',feature] = feature_val
+            
+        elif feature_type == 'categorical':
+            #Store the set of all values
+            all_feature_values = param.var_ranges.loc['set',feature]
+            #The maximum number of values the rule can match is one less 
+            #than the total number of values (or it would match everything
+            #and would not provide any useful info)
+            max_elements = len(all_feature_values)-1
+            #Determine the number of elements from the value set to include
+            num_to_select = np.random.randint(max_elements)
+            #select the values to include in the rule set. NOTE: This may
+            #or may not include the value of the target input feature
+            selected_values = np.random.choice(list(all_feature_values),size=num_to_select,replace=False)
+            #Force the value of the target input feature to be in the 
+            #rule set
+            target = set([feature_val])
+            #Add the previously selected values to the rule set
+            target = target.union(selected_values)
+            #Store in self.criteria
+            self.criteria.loc['lb',feature] = np.NaN
+            self.criteria = self.criteria.astype(object)
+            self.criteria.at['target',feature] = target
+        else:
+            print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
                 
-                
-#        print(self.criteria)
         
     def identify_matches(self,data,param,features_to_update = 'all'):
         """
@@ -252,8 +272,6 @@ class CC_clause:
         else:
             self.pass_ratio_test = True
         
- 
-    
         
     def calc_fitness(self):
         """
@@ -275,9 +293,17 @@ class CC_clause:
         #selected from the number of valid input feature vectors
         part3 = sps.binom(self.Ntot,self.Nmatch)
         
-        #The probability that the observed association between the clause and 
-        #the target class k is due to chance
-        self.fitness = part1*part2/part3
+        #Check that part3 is non-zero
+        if part3==0:
+            self.fitness = 10
+            print('\n\nWARNING: invalid fitness denominator')
+            print('   Ntot = {}, Nmatch = {}'.format(self.Ntot,self.Nmatch))
+            print(self.Ntot)
+            print(self.criteria)
+        else:
+            #The probability that the observed association between the clause and 
+            #the target class k is due to chance
+            self.fitness = part1*part2/part3
         
         
     def drop_feature(self,data,param,features_to_drop):
@@ -305,9 +331,6 @@ class CC_clause:
         self.calc_fitness()
         
         
-        
-        
-        
     def keys(self,prnt=True):
         """
         Return a list of tuples of the variable names and types
@@ -332,7 +355,7 @@ class CC_clause:
     """
 
         
-def range_calc_integer(max_val,min_val,feature_val):
+def range_calc_integer(max_val,min_val,actual_feature_val):
     """
     Generates a range with integer start & end points that:
         1. does not contain both the minimum and the maximum value in the 
@@ -347,9 +370,22 @@ def range_calc_integer(max_val,min_val,feature_val):
     OUTPUTS
         The lower and upper bounds of the range
     """
+    
+    #check if there is a feature value to match or not
+    missing_feature_val = np.isnan(actual_feature_val)
+    if missing_feature_val:
+        feature_val = max_val
+    else:
+        feature_val = actual_feature_val
     #Define a continuous range beginning and ending on integers
     #Select a lower bound on the integers in [min_val,feature_val]
     lb = np.random.randint(min_val,high=feature_val+1)
+    
+    #If the feature value is missing, set the lower limit to the previously 
+    #determined lb
+    if missing_feature_val:
+        feature_val = lb
+        
     #Select an upper bound on the integers in [lb,max_val]
     ub = np.random.randint(feature_val,high=max_val+1)
     #If the selected bounds contain the entire range (which would 
@@ -399,12 +435,8 @@ def find_ranges(data,param):
     """
     
     #Find the variable column names
-    data_cols = [x for x in data.keys() if not x==param.y]
-    #Extract the variable data
-    var_data = pd.DataFrame(data[data_cols])
+    data_cols = [x for x in data.keys() if not x==param.y]    
     
-    
-    types =[]
     #Determine if the variable is binary, integer, or continuous as a way
     #to reduce the search space
     var_ranges = pd.DataFrame()
@@ -412,8 +444,6 @@ def find_ranges(data,param):
     for var in data_cols:
         #Get the set of unique values for the current variable
         unique_vals = set(data.loc[~data[var].isna(),var])
-#        var_ranges['set',var] = np.NaN
-        breakhere=1
         
         #If there are less than 2 unique values, warn user of useless variable 
         #and add variable to the droplist
@@ -491,7 +521,6 @@ def gen_CC_clause_pop(data,param,new_pop,CC_stats):
         
         new_pop_list.append(CC_clause(data,param,source_input_vector,clause_order))
         
-        inputvars = 'figure these out'
         new_pop_list[-1].identify_matches(data,param)
         new_pop_list[-1].update_Nk(data,param)
         new_pop_list[-1].update_Nmatchk(data,param)
