@@ -83,7 +83,7 @@ class CC_clause:
         self.target_class = data.loc[source_input_vector,param.y]
         self.input_vector_data = data.loc[source_input_vector,param.data_features]
         #Find the candidates with valid values
-        candidate_features = list(input_vector_data[~input_vector_data.isna()].index)
+        candidate_features = list(self.input_vector_data[~self.input_vector_data.isna()].index)
         #Randomly select clause_order features without replacement and store
         #in self
         self.source_input_vector = source_input_vector
@@ -99,7 +99,7 @@ class CC_clause:
         self.criteria = pd.DataFrame(dtype=object)
         for feature in self.features:
             #Extract the feature value for the source target input vector
-            feature_val = input_vector_data[feature]
+            feature_val = self.input_vector_data[feature]
             self.generate_CC_criteria(data,param,feature,feature_val)
             
     def generate_CC_criteria(self,data,param,feature,actual_feature_value):
@@ -123,11 +123,11 @@ class CC_clause:
         elif feature_type == 'continuous':
                 
             #check if there is a feature value to match or not
-            missing_feature_val = np.isnan(actual_feature_val)
+            missing_feature_val = pd.isnull(actual_feature_value)
             if missing_feature_val:
                 feature_val = max_val
             else:
-                feature_val = actual_feature_val
+                feature_val = actual_feature_value
             
             #select a lower bound between the min value and the feature
             #value
@@ -144,28 +144,47 @@ class CC_clause:
             self.criteria.loc['lb',feature] = lb
             self.criteria.loc['ub',feature] = ub
             
-        elif feature_type == 'binary':
-            #Only one choice for binary to ensure clause matches input
-            #feature vector
+        elif feature_type == 'binary':                
+            #check if there is a feature value to match or not
+            missing_feature_val = pd.isnull(actual_feature_value)
+            if missing_feature_val:
+                feature_val = np.random.choice(list(param.var_ranges.loc['set',feature]))
+            else:
+                feature_val = actual_feature_value
+            
+            #If a valid feature value is input, there is only one choice for 
+            #binary to ensure clause matches input feature vector
             self.criteria.loc['lb',feature] = np.NaN
             self.criteria = self.criteria.astype(object)
             self.criteria.at['target',feature] = feature_val
             
         elif feature_type == 'categorical':
+            #check if there is a feature value to match or not
+            missing_feature_val = pd.isnull(actual_feature_value)
+            if missing_feature_val:
+                target = set()
+                #Offset to reflect the fact that there is no actual value to
+                #include in the set
+                offset = 0
+            else:
+                #Force the value of the target input feature to be in the 
+                #rule set
+                target = set([actual_feature_value])
+                #Offset to reflect the fact that the actual feature value
+                #is already in the set
+                offset = 1
+                
             #Store the set of all values
             all_feature_values = param.var_ranges.loc['set',feature]
             #The maximum number of values the rule can match is one less 
             #than the total number of values (or it would match everything
             #and would not provide any useful info)
-            max_elements = len(all_feature_values)-1
+            max_elements = len(all_feature_values)-offset
             #Determine the number of elements from the value set to include
             num_to_select = np.random.randint(max_elements)
             #select the values to include in the rule set. NOTE: This may
             #or may not include the value of the target input feature
             selected_values = np.random.choice(list(all_feature_values),size=num_to_select,replace=False)
-            #Force the value of the target input feature to be in the 
-            #rule set
-            target = set([feature_val])
             #Add the previously selected values to the rule set
             target = target.union(selected_values)
             #Store in self.criteria
@@ -372,7 +391,7 @@ def range_calc_integer(max_val,min_val,actual_feature_val):
     """
     
     #check if there is a feature value to match or not
-    missing_feature_val = np.isnan(actual_feature_val)
+    missing_feature_val = pd.isnull(actual_feature_val)
     if missing_feature_val:
         feature_val = max_val
     else:
