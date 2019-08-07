@@ -100,7 +100,8 @@ class CC_clause:
         for feature in self.features:
             #Extract the feature value for the source target input vector
             feature_val = self.input_vector_data[feature]
-            self.generate_CC_criteria(data,param,feature,feature_val)
+            criteria = self.generate_CC_criteria(data,param,feature,feature_val)
+            self.criteria[feature] = criteria[feature]
             
     def generate_CC_criteria(self,data,param,feature,actual_feature_value):
         """
@@ -114,11 +115,13 @@ class CC_clause:
         max_val = param.var_ranges.loc['max',feature]
         min_val = param.var_ranges.loc['min',feature]
         feature_type = param.var_ranges.loc['type',feature]
+        #create a blank dataframe to store the criteria
+        criteria = pd.DataFrame(data={feature:[np.nan,np.nan,np.nan]},index=['lb','ub','target'])
         
         if feature_type == 'integer':     
             lb,ub = range_calc_integer(max_val,min_val,actual_feature_value)
-            self.criteria.loc['lb',feature] = lb
-            self.criteria.loc['ub',feature] = ub
+            criteria.loc['lb',feature] = lb
+            criteria.loc['ub',feature] = ub
             
         elif feature_type == 'continuous':
                 
@@ -141,8 +144,8 @@ class CC_clause:
             #select an upper bound between the feature value and the max
             #value 
             ub = np.random.rand()*(max_val-feature_val)+feature_val
-            self.criteria.loc['lb',feature] = lb
-            self.criteria.loc['ub',feature] = ub
+            criteria.loc['lb',feature] = lb
+            criteria.loc['ub',feature] = ub
             
         elif feature_type == 'binary':                
             #check if there is a feature value to match or not
@@ -154,9 +157,9 @@ class CC_clause:
             
             #If a valid feature value is input, there is only one choice for 
             #binary to ensure clause matches input feature vector
-            self.criteria.loc['lb',feature] = np.NaN
-            self.criteria = self.criteria.astype(object)
-            self.criteria.at['target',feature] = feature_val
+            criteria.loc['lb',feature] = np.NaN
+            criteria = criteria.astype(object)
+            criteria.at['target',feature] = feature_val
             
         elif feature_type == 'categorical':
             #check if there is a feature value to match or not
@@ -188,11 +191,13 @@ class CC_clause:
             #Add the previously selected values to the rule set
             target = target.union(selected_values)
             #Store in self.criteria
-            self.criteria.loc['lb',feature] = np.NaN
-            self.criteria = self.criteria.astype(object)
-            self.criteria.at['target',feature] = target
+            criteria.loc['lb',feature] = np.NaN
+            criteria = criteria.astype(object)
+            criteria.at['target',feature] = target
         else:
             print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
+            
+        return criteria
                 
         
     def identify_matches(self,data,param,features_to_update = 'all'):
@@ -540,11 +545,11 @@ def gen_CC_clause_pop(data,param,new_pop,CC_stats):
         
         new_pop_list.append(CC_clause(data,param,source_input_vector,clause_order))
         
-        new_pop_list[-1].identify_matches(data,param)
-        new_pop_list[-1].update_Nk(data,param)
-        new_pop_list[-1].update_Nmatchk(data,param)
-        new_pop_list[-1].ratio_test()
-        new_pop_list[-1].calc_fitness()
+#        new_pop_list[-1].identify_matches(data,param)
+#        new_pop_list[-1].update_Nk(data,param)
+#        new_pop_list[-1].update_Nmatchk(data,param)
+#        new_pop_list[-1].ratio_test()
+#        new_pop_list[-1].calc_fitness()
         
     return new_pop_list
         
