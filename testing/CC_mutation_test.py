@@ -6,38 +6,57 @@ This is a temporary script file.
 """
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 
 L = 100
-Pw =1
+
+Pw = 1
 Pz = .25
-num_reps=1000
+num_reps=400
 num_runs = 50
-#
-#Pw_Pz_ratio = Pz/Pw
-#
-#predicted = L-L*(.5-.5*Pw_Pz_ratio)
-#
-#print('predicted: {}'.format(predicted))
+
+Pw_Pz_ratio = Pz/Pw
+
+predicted = L/2-(L/2)*(.5-.5*Pw_Pz_ratio)
+
+print('predicted: {}'.format(predicted))
 
 
 
 
 traces = []
 for i in range(num_runs):
-    clause = np.ones(L)   
+    clause = np.ones(L)
     trace = []
     for i in range(num_reps):
         
-        for feature in range(L):
-            if np.random.rand(1)[0] < 1/L:
+        to_mutate = pd.DataFrame(np.random.rand(L)<1/L)
+        
+        if not to_mutate.any()[0]:
+            to_mutate.loc[np.random.randint(L)] = True
+            
+#        features_to_mutate = list(to_mutate[to_mutate[0]==True].index)
+        
+        for feature,to_flip in enumerate(to_mutate.values):
+            if to_flip:
                 if clause[feature]==0:
                     if np.random.rand(1)[0] < Pz:
                         clause[feature]=1
                 else:
                     if np.random.rand(1)[0] < Pw:
                         clause[feature]=0
+            
+        
+#        for feature in range(L):
+#            if np.random.rand(1)[0] < 1/L:
+#                if clause[feature]==0:
+#                    if np.random.rand(1)[0] < Pz:
+#                        clause[feature]=1
+#                else:
+#                    if np.random.rand(1)[0] < Pw:
+#                        clause[feature]=0
                 
         trace.append(np.sum(clause))
         
