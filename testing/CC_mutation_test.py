@@ -57,14 +57,26 @@ for i in range(num_runs):
 #                elif np.random.rand(1)[0] < Pw:
 #                    clause[feature]=0
         
-        for feature,to_flip in enumerate(to_mutate.values):
-            if to_flip:
-                if clause[feature]==0:
-                    if np.random.rand(1)[0] < Pz:
-                        clause[feature]=1
-                else:
-                    if np.random.rand(1)[0] < Pw:
-                        clause[feature]=0
+        
+        #around 9.7sec
+#        for feature,to_flip in enumerate(to_mutate.values):
+#            if to_flip:
+#                if clause[feature]==0:
+#                    if np.random.rand(1)[0] < Pz:
+#                        clause[feature]=1
+#                else:
+#                    if np.random.rand(1)[0] < Pw:
+#                        clause[feature]=0
+                        
+        features_to_flip =[feature for feature,to_flip in enumerate(to_mutate.values) if to_flip]
+        breakhere=1
+        for feature in features_to_flip:
+            if clause[feature]==0:
+                if np.random.rand(1)[0] < Pz:
+                    clause[feature]=1
+            else:
+                if np.random.rand(1)[0] < Pw:
+                    clause[feature]=0
             
         
 #        for feature in range(L):
