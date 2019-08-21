@@ -87,12 +87,8 @@ class CC_clause:
         #Randomly select clause_order features without replacement and store
         #in self
         self.source_input_vector = source_input_vector
-        self.features = np.random.choice(candidate_features,size=clause_order,replace=False)
+        self.features = list(np.random.choice(candidate_features,size=clause_order,replace=False))
         
-#        """
-#        remove next lines
-#        """
-#        self.features = np.array(['V2','V7','V6','V13'])
         
                 
         #decide ranges
@@ -233,7 +229,7 @@ class CC_clause:
             else:
                 print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
                 
-        #True if all features are matched
+        #True for input feature vectors where all features are matched
         self.matches['clause_match'] = self.matches[self.features].all(axis=1) 
         #The predicted output class for clause matches, np.nan for non-matches
         self.matches.loc[self.matches['clause_match'],'output_class']=self.target_class
@@ -328,6 +324,17 @@ class CC_clause:
             #The probability that the observed association between the clause and 
             #the target class k is due to chance
             self.fitness = part1*part2/part3
+            
+    def update_fitness(self,data,param,features_to_update = 'all'):
+        """
+        
+        """
+        
+        self.identify_matches(data,param,features_to_update)
+        self.update_Nk(data,param)
+        self.update_Nmatchk(data,param)
+        self.ratio_test()
+        self.calc_fitness()
         
         
     def drop_feature(self,data,param,features_to_drop):
@@ -353,6 +360,8 @@ class CC_clause:
         self.update_Nmatchk(data,param)
         #recalculate the fitness
         self.calc_fitness()
+        #Update the clause order
+        self.order = len(self.features)
         
         
     def keys(self,prnt=True):
@@ -545,11 +554,7 @@ def gen_CC_clause_pop(data,param,new_pop,CC_stats):
         
         new_pop_list.append(CC_clause(data,param,source_input_vector,clause_order))
         
-#        new_pop_list[-1].identify_matches(data,param)
-#        new_pop_list[-1].update_Nk(data,param)
-#        new_pop_list[-1].update_Nmatchk(data,param)
-#        new_pop_list[-1].ratio_test()
-#        new_pop_list[-1].calc_fitness()
+        new_pop_list[-1].update_fitness(data,param)
         
     return new_pop_list
         
