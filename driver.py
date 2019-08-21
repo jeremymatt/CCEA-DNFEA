@@ -24,6 +24,7 @@ data = make_test(15,perc_missing=10,inc_uni_valued=True)
 param.y='y'
 param.var_ranges = fcn.find_ranges(data,param)
 param.data_features = [x for x in data.keys() if not x==param.y]
+param.L = len(param.data_features)
 param.num_features = len(param.data_features)
 param.feature_order = fcn.find_max_input_feature_order(data,param)
 param.treat_int_as_categorical = False
