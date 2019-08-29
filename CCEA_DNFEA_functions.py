@@ -228,7 +228,8 @@ class CC_clause:
                 self.matches[feature] = data[feature].isin(self.criteria.loc['target',feature])
             else:
                 print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
-                
+            
+            
         #True for input feature vectors where all features are matched
         self.matches['clause_match'] = self.matches[self.features].all(axis=1) 
         #The predicted output class for clause matches, np.nan for non-matches
