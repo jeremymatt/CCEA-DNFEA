@@ -229,7 +229,7 @@ class CC_clause:
             else:
                 print('ERROR: unknown feature type ({}) for feature {}'.format(feature_type,feature))
             
-            
+            np.zer
         #True for input feature vectors where all features are matched
         self.matches['clause_match'] = self.matches[self.features].all(axis=1) 
         #The predicted output class for clause matches, np.nan for non-matches
